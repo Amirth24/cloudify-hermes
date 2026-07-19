@@ -6,13 +6,34 @@ from unittest.mock import MagicMock, patch
 from cloudify_hermes.onboard.bootstrap import Onboard
 
 
-@patch("cloudify_hermes.onboard.bootstrap.S3Backend")
-def test_onboard_pulls_skills(mock_s3_cls, tmp_path):
+def _make_backend(mock_s3_cls, skill_bytes=b"---\nname: test-skill\n---\n# Test"):
+    """Build a prefix-aware mock backend."""
     mock_backend = MagicMock()
     mock_s3_cls.return_value = mock_backend
     mock_backend.prefix = "cloudify/"
-    mock_backend.list.return_value = ["cloudify/skills/test-skill/SKILL.md"]
-    mock_backend.get.return_value = b"---\nname: test-skill\n---\n# Test"
+
+    def _list(prefix=""):
+        if prefix.startswith("skills"):
+            return ["cloudify/skills/test-skill/SKILL.md"]
+        if prefix.startswith("cron"):
+            return []
+        if prefix.startswith("config-snapshots"):
+            return []
+        return []
+
+    def _get(key):
+        if key.endswith("SKILL.md"):
+            return skill_bytes
+        return None
+
+    mock_backend.list.side_effect = _list
+    mock_backend.get.side_effect = _get
+    return mock_backend
+
+
+@patch("cloudify_hermes.onboard.bootstrap.S3Backend")
+def test_onboard_pulls_skills(mock_s3_cls, tmp_path):
+    mock_backend = _make_backend(mock_s3_cls)
     skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
     cron_dir = tmp_path / "cron"
@@ -33,11 +54,7 @@ def test_onboard_pulls_skills(mock_s3_cls, tmp_path):
 
 @patch("cloudify_hermes.onboard.bootstrap.S3Backend")
 def test_onboard_is_idempotent(mock_s3_cls, tmp_path):
-    mock_backend = MagicMock()
-    mock_s3_cls.return_value = mock_backend
-    mock_backend.prefix = "cloudify/"
-    mock_backend.list.return_value = ["cloudify/skills/test-skill/SKILL.md"]
-    mock_backend.get.return_value = b"---\nname: test-skill\n---\n# Test"
+    mock_backend = _make_backend(mock_s3_cls)
     skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
     cron_dir = tmp_path / "cron"
