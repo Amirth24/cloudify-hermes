@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cloudify-hermes"
+version = "0.1.0"
+description = "Cloud sync for Hermes Agent"
+requires-python = ">=3.10"
+dependencies = ["boto3", "mem0ai>=2.0.10,<3", "cryptography", "pyyaml"]
+
+[project.scripts]
+cloudify = "cloudify_hermes.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["cloudify_hermes*"]

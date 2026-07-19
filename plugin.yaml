@@ -1,0 +1,13 @@
+name: cloudify-hermes
+version: 0.1.0
+description: "Cloud sync for Hermes Agent — skills, cron, memory, and config to S3. Mem0 bridge for central knowledge. One-command onboarding."
+author: amirth
+kind: extension
+pip_dependencies:
+  - boto3
+  - mem0ai>=2.0.10,<3
+  - cryptography
+  - pyyaml
+hooks:
+  - post_tool_call
+  - on_session_end
