@@ -9,14 +9,46 @@ logger = logging.getLogger(__name__)
 
 
 class S3Backend:
-    def __init__(self, bucket: str, prefix: str = "cloudify/", region: str = "ap-south-1", profile: str = ""):
+    def __init__(
+        self,
+        bucket: str,
+        prefix: str = "cloudify/",
+        region: str = "ap-south-1",
+        profile: str = "",
+        role_arn: str = "",
+        external_id: str = "",
+        session_name: str = "cloudify-hermes",
+    ):
         self.bucket = bucket
         self.prefix = prefix
+
+        # Build the base session (profile or default credential chain)
         session_kwargs = {"region_name": region}
         if profile:
             session_kwargs["profile_name"] = profile
         session = boto3.Session(**session_kwargs)
-        self.client = session.client("s3")
+
+        # If a role ARN is specified, assume it via STS
+        if role_arn:
+            sts_client = session.client("sts")
+            assume_kwargs = {
+                "RoleArn": role_arn,
+                "RoleSessionName": session_name,
+            }
+            if external_id:
+                assume_kwargs["ExternalId"] = external_id
+            assumed = sts_client.assume_role(**assume_kwargs)
+            creds = assumed["Credentials"]
+            self.client = boto3.client(
+                "s3",
+                region_name=region,
+                aws_access_key_id=creds["AccessKeyId"],
+                aws_secret_access_key=creds["SecretAccessKey"],
+                aws_session_token=creds["SessionToken"],
+            )
+            logger.info("Assumed IAM role: %s (session: %s)", role_arn, session_name)
+        else:
+            self.client = session.client("s3")
 
     def _full_key(self, key: str) -> str:
         return f"{self.prefix}{key}"

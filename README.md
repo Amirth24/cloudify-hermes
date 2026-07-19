@@ -19,7 +19,9 @@ cloudify:
     bucket: "your-bucket"
     prefix: "cloudify/"
     region: "ap-south-1"
-    profile: ""
+    profile: ""              # Optional: AWS profile from ~/.aws/credentials
+    role_arn: ""             # IAM role ARN to assume (preferred over access keys)
+    external_id: ""          # Optional: external ID for cross-account role assumption
   encryption:
     passphrase_env: "CLOUDIFY_PASSPHRASE"
   mem0:

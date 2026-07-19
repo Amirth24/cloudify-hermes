@@ -64,3 +64,86 @@ def test_s3_get_returns_none_on_nosuchkey(mock_boto3):
     backend = S3Backend(bucket="test-bucket", prefix="cloudify/", region="ap-south-1", profile="")
     data = backend.get("nonexistent")
     assert data is None
+
+@patch("cloudify_hermes.storage.s3.boto3")
+def test_s3_role_assumption(mock_boto3):
+    """Test that S3Backend assumes an IAM role when role_arn is provided."""
+    mock_session = MagicMock()
+    mock_boto3.Session.return_value = mock_session
+
+    # STS client returns assumed role credentials
+    mock_sts = MagicMock()
+    mock_s3_client = MagicMock()
+    mock_sts.assume_role.return_value = {
+        "Credentials": {
+            "AccessKeyId": "ASIA-TEST",
+            "SecretAccessKey": "secret-test",
+            "SessionToken": "session-token-test",
+        }
+    }
+    # First .client("sts") call returns STS, second .client("s3") returns S3
+    mock_session.client.side_effect = [mock_sts, mock_s3_client]
+
+    backend = S3Backend(
+        bucket="test-bucket",
+        prefix="cloudify/",
+        region="ap-south-1",
+        profile="",
+        role_arn="arn:aws:iam::123456789012:role/CloudifyBackupRole",
+    )
+
+    # Verify STS assume_role was called with the right args
+    mock_sts.assume_role.assert_called_once()
+    call_args = mock_sts.assume_role.call_args[1]
+    assert call_args["RoleArn"] == "arn:aws:iam::123456789012:role/CloudifyBackupRole"
+    assert call_args["RoleSessionName"] == "cloudify-hermes"
+
+    # Verify S3 client was created with assumed credentials
+    mock_boto3.client.assert_called_with(
+        "s3",
+        region_name="ap-south-1",
+        aws_access_key_id="ASIA-TEST",
+        aws_secret_access_key="secret-test",
+        aws_session_token="session-token-test",
+    )
+
+@patch("cloudify_hermes.storage.s3.boto3")
+def test_s3_role_assumption_with_external_id(mock_boto3):
+    """Test that external_id is passed to assume_role when provided."""
+    mock_session = MagicMock()
+    mock_boto3.Session.return_value = mock_session
+    mock_sts = MagicMock()
+    mock_s3_client = MagicMock()
+    mock_sts.assume_role.return_value = {
+        "Credentials": {
+            "AccessKeyId": "ASIA-TEST",
+            "SecretAccessKey": "secret-test",
+            "SessionToken": "session-token-test",
+        }
+    }
+    mock_session.client.side_effect = [mock_sts, mock_s3_client]
+
+    backend = S3Backend(
+        bucket="test-bucket",
+        role_arn="arn:aws:iam::123456789012:role/CloudifyBackupRole",
+        external_id="my-external-id",
+    )
+    call_args = mock_sts.assume_role.call_args[1]
+    assert call_args["ExternalId"] == "my-external-id"
+
+@patch("cloudify_hermes.storage.s3.boto3")
+def test_s3_no_role_uses_default_credentials(mock_boto3):
+    """Test that without role_arn, boto3 uses default session credentials."""
+    mock_session = MagicMock()
+    mock_client = MagicMock()
+    mock_session.client.return_value = mock_client
+    mock_boto3.Session.return_value = mock_session
+
+    backend = S3Backend(
+        bucket="test-bucket",
+        prefix="cloudify/",
+        region="ap-south-1",
+        profile="gld",
+    )
+    # Should call session.client("s3") directly, not STS
+    mock_session.client.assert_called_with("s3")

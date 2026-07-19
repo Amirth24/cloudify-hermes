@@ -7,7 +7,7 @@ import yaml
 
 _DEFAULTS: Dict[str, Any] = {
     "enabled": False,
-    "s3": {"bucket": "", "prefix": "cloudify/", "region": "ap-south-1", "profile": ""},
+    "s3": {"bucket": "", "prefix": "cloudify/", "region": "ap-south-1", "profile": "", "role_arn": "", "external_id": ""},
     "encryption": {"passphrase_env": "CLOUDIFY_PASSPHRASE"},
     "mem0": {"api_key_env": "MEM0_API_KEY", "user_id": "", "agent_id": "hermes", "knowledge_graphs": {}},
     "sync": {"skills": True, "cron": True, "memory": True, "config": True, "viking": True},

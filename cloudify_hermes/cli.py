@@ -26,6 +26,8 @@ def _make_backend(cfg: dict) -> S3Backend:
         prefix=s3["prefix"],
         region=s3["region"],
         profile=s3.get("profile", ""),
+        role_arn=s3.get("role_arn", ""),
+        external_id=s3.get("external_id", ""),
     )
 
 
