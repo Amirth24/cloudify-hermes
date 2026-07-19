@@ -5,4 +5,7 @@ dist/
 build/
 .venv/
 venv/
-.DS_StoreEOF
+.DS_Store
+EOF
+.pytest_cache/
+._*

@@ -61,7 +61,7 @@ class SkillsSync:
             skill_dir = skill_path.parent
             rel_dir = skill_dir.relative_to(self.skills_dir)
             for file_path in skill_dir.rglob("*"):
-                if file_path.is_file() and "__pycache__" not in file_path.parts:
+                if file_path.is_file() and "__pycache__" not in file_path.parts and not file_path.name.startswith("._"):
                     rel_file = file_path.relative_to(self.skills_dir)
                     s3_key = f"skills/{rel_file}"
                     data = file_path.read_bytes()

@@ -72,6 +72,9 @@ class Mem0Bridge:
                 mem_type = "event"
             else:
                 mem_type = "shared"
+            # Skip placeholders and abstract files
+            if "PLACEHOLDER" in abstract or uri.endswith(".abstract.md"):
+                continue
             entries.append({"content": abstract, "type": mem_type, "uri": uri})
         return entries
 
