@@ -33,12 +33,12 @@ class Mem0Bridge:
         self._client = None
 
     def _get_mem0_client(self):
-        """Lazy-init Mem0 client."""
+        """Lazy-init Mem0 client (managed platform via MemoryClient)."""
         if self._client is not None:
             return self._client
         try:
-            from mem0 import Memory
-            self._client = Memory(api_key=self.mem0_api_key)
+            from mem0 import MemoryClient
+            self._client = MemoryClient(api_key=self.mem0_api_key)
         except ImportError:
             logger.error("mem0ai not installed — run pip install mem0ai")
             raise
@@ -47,9 +47,33 @@ class Mem0Bridge:
     def fetch_ov_entries(self) -> List[dict]:
         """Fetch all entries from OpenViking via HTTP API."""
         import httpx
-        resp = httpx.get(f"{self.ov_endpoint}/memories", timeout=30)
+        # OpenViking API: POST /api/v1/search/find
+        resp = httpx.post(
+            f"{self.ov_endpoint}/api/v1/search/find",
+            json={"query": "user environment preferences patterns entities", "limit": 100, "score_threshold": 0.0},
+            timeout=30,
+        )
         resp.raise_for_status()
-        return resp.json().get("memories", [])
+        data = resp.json()
+        memories = data.get("result", {}).get("memories", [])
+        # Extract content from abstract field and categorize by URI path
+        entries = []
+        for mem in memories:
+            uri = mem.get("uri", "")
+            abstract = mem.get("abstract", "")
+            # Determine type from URI path
+            if "/preferences/" in uri:
+                mem_type = "preference"
+            elif "/entities/" in uri:
+                mem_type = "entity"
+            elif "/patterns/" in uri:
+                mem_type = "pattern"
+            elif "/events/" in uri:
+                mem_type = "event"
+            else:
+                mem_type = "shared"
+            entries.append({"content": abstract, "type": mem_type, "uri": uri})
+        return entries
 
     def push_entries(self, entries: List[dict]):
         """Push entries to Mem0 with category-based knowledge graphs."""

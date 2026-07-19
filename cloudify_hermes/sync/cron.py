@@ -29,11 +29,23 @@ class CronSync:
         jobs_file = self.cron_dir / "jobs.json"
         if not jobs_file.exists():
             return []
-        return json.loads(jobs_file.read_text() or "[]")
+        data = json.loads(jobs_file.read_text() or "[]")
+        # Hermes stores jobs as {"jobs": [...], "updated_at": "..."}
+        if isinstance(data, dict) and "jobs" in data:
+            return data["jobs"]
+        if isinstance(data, list):
+            return data
+        return []
 
     def _save_local_jobs(self, jobs: List[dict]):
         jobs_file = self.cron_dir / "jobs.json"
-        jobs_file.write_text(json.dumps(jobs, indent=2))
+        # Preserve Hermes format
+        from datetime import datetime, timezone
+        payload = {
+            "jobs": jobs,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        jobs_file.write_text(json.dumps(payload, indent=2))
 
     def push(self) -> List[dict]:
         jobs = self._load_local_jobs()
