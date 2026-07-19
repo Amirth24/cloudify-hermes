@@ -1,0 +1,1 @@
+"""Skills sync engine — push/pull to S3 with frontmatter opt-out and LWW."""
