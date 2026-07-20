@@ -3,7 +3,11 @@ from __future__ import annotations
 import logging
 from typing import List, Dict, Optional
 
+from cloudify_hermes.env import CloudifyEnv
+
 logger = logging.getLogger(__name__)
+
+_env = CloudifyEnv()
 
 CATEGORY_MAP = {
     "preference": "user_profile",
@@ -21,15 +25,15 @@ def categorize_entry(entry: dict) -> str:
 class Mem0Bridge:
     def __init__(
         self,
-        ov_endpoint: str = "http://localhost:8765",
+        ov_endpoint: str | None = None,
         mem0_api_key: str = "",
         user_id: str = "",
-        agent_id: str = "hermes",
+        agent_id: str | None = None,
     ):
-        self.ov_endpoint = ov_endpoint
+        self.ov_endpoint = ov_endpoint if ov_endpoint is not None else _env.ov_endpoint
         self.mem0_api_key = mem0_api_key
         self.user_id = user_id
-        self.agent_id = agent_id
+        self.agent_id = agent_id if agent_id is not None else _env.agent_id
         self._client = None
 
     def _get_mem0_client(self):
