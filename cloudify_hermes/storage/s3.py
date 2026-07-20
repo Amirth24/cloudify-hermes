@@ -4,23 +4,28 @@ import logging
 from typing import List, Optional
 import boto3
 from botocore.exceptions import ClientError
+from cloudify_hermes.env import CloudifyEnv
 
 logger = logging.getLogger(__name__)
+
+_env = CloudifyEnv()
 
 
 class S3Backend:
     def __init__(
         self,
         bucket: str,
-        prefix: str = "cloudify/",
-        region: str = "ap-south-1",
+        prefix: str | None = None,
+        region: str | None = None,
         profile: str = "",
         role_arn: str = "",
         external_id: str = "",
-        session_name: str = "cloudify-hermes",
+        session_name: str | None = None,
     ):
         self.bucket = bucket
-        self.prefix = prefix
+        self.prefix = prefix if prefix is not None else _env.s3_prefix
+        region = region if region is not None else _env.s3_region
+        session_name = session_name if session_name is not None else _env.s3_session_name
 
         # Build the base session (profile or default credential chain)
         session_kwargs = {"region_name": region}
