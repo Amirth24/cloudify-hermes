@@ -6,7 +6,10 @@ import sys
 import os
 from pathlib import Path
 from cloudify_hermes.config import load_cloudify_config
+from cloudify_hermes.env import CloudifyEnv
 from cloudify_hermes.storage.s3 import S3Backend
+
+_env = CloudifyEnv()
 from cloudify_hermes.sync.skills import SkillsSync
 from cloudify_hermes.sync.cron import CronSync
 from cloudify_hermes.sync.memory import MemoryLogSync
@@ -38,7 +41,7 @@ def cmd_push(args):
         sys.exit(1)
     backend = _make_backend(cfg)
     home = _get_hermes_home()
-    agent_id = cfg.get("mem0", {}).get("agent_id", "hermes")
+    agent_id = cfg.get("mem0", {}).get("agent_id", None) or _env.agent_id
     if args.what == "skills" or args.what == "all":
         sync = SkillsSync(backend, home / "skills", agent_id)
         pushed = sync.push()
@@ -67,7 +70,7 @@ def cmd_pull(args):
         sys.exit(1)
     backend = _make_backend(cfg)
     home = _get_hermes_home()
-    agent_id = cfg.get("mem0", {}).get("agent_id", "hermes")
+    agent_id = cfg.get("mem0", {}).get("agent_id", None) or _env.agent_id
     if args.what == "skills" or args.what == "all":
         sync = SkillsSync(backend, home / "skills", agent_id)
         pulled = sync.pull()
@@ -97,7 +100,7 @@ def cmd_onboard(args):
         sys.exit(1)
     backend = _make_backend(cfg)
     home = _get_hermes_home()
-    agent_id = cfg.get("mem0", {}).get("agent_id", "hermes")
+    agent_id = cfg.get("mem0", {}).get("agent_id", None) or _env.agent_id
     # Lazy import: onboard module may not exist yet during parallel task 9.
     from cloudify_hermes.onboard.bootstrap import Onboard
     onboard = Onboard(
@@ -115,7 +118,7 @@ def cmd_status(args):
     cfg = load_cloudify_config()
     print(f"Enabled: {cfg.get('enabled', False)}")
     print(f"S3: {cfg['s3']['bucket']}/{cfg['s3']['prefix']} (region: {cfg['s3']['region']})")
-    print(f"Agent ID: {cfg.get('mem0', {}).get('agent_id', 'hermes')}")
+    print(f"Agent ID: {cfg.get('mem0', {}).get('agent_id', None) or _env.agent_id}")
     print(f"Mem0 user: {cfg.get('mem0', {}).get('user_id', '')}")
     print(f"Sync: {cfg.get('sync', {})}")
     print(f"Hooks: {cfg.get('hooks', {})}")
@@ -129,10 +132,10 @@ def cmd_mem0_sync(args):
         print("MEM0_API_KEY not set")
         sys.exit(1)
     bridge = Mem0Bridge(
-        ov_endpoint="http://localhost:8765",
+        ov_endpoint=None,
         mem0_api_key=api_key,
         user_id=mem0_cfg.get("user_id", ""),
-        agent_id=mem0_cfg.get("agent_id", "hermes"),
+        agent_id=mem0_cfg.get("agent_id", None),
     )
     bridge.sync()
     print("Mem0 sync complete")
