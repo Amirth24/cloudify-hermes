@@ -43,3 +43,18 @@ def test_merge_overrides(tmp_hermes_home):
     # unspecified s3 defaults preserved
     assert cfg["s3"]["prefix"] == "cloudify/"
     assert cfg["s3"]["profile"] == ""
+
+
+def test_defaults_from_env(tmp_path, monkeypatch):
+    """CloudifyEnv env vars propagate into config defaults."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("CLOUDIFY_S3_PREFIX", "test-prefix/")
+    monkeypatch.setenv("CLOUDIFY_S3_REGION", "eu-west-1")
+    monkeypatch.setenv("CLOUDIFY_AGENT_ID", "test-agent")
+    (tmp_path / "config.yaml").write_text("")
+
+    cfg = load_cloudify_config()
+
+    assert cfg["s3"]["prefix"] == "test-prefix/"
+    assert cfg["s3"]["region"] == "eu-west-1"
+    assert cfg["mem0"]["agent_id"] == "test-agent"
